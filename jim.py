@@ -10,7 +10,7 @@ from flap import *
 from tlv import *
 from client import *
 from snac_handler import *
-from snac_visualizer import *
+from snac_parser import *
 from utils import format_hex_ascii
 
 try:
@@ -25,38 +25,8 @@ except ImportError:
 SCREEN_NAME = ""
 
 
-class SnacDispatcher:
-    """Dispatches SNACs to registered handlers."""
-
-    def __init__(self):
-        self.handlers: Dict[Tuple[int, int], SnacHandler] = {}
-
-    def register_handler(self, family: int, subtype: int, handler: SnacHandler):
-        self.handlers[(family, subtype)] = handler
-        print(f"Registered handler for SNAC({family:04x},{subtype:04x})")
-
-    def dispatch(
-        self, snac: Dict[str, Any], client: ClientContext
-    ) -> Optional[Dict[str, Any]]:
-        key = (snac["family"], snac["subtype"])
-        handler = self.handlers.get(key)
-        if handler:
-            try:
-                return handler.handle(snac, client)
-            except Exception as e:
-                print(
-                    colored(
-                        f"Error handling SNAC({key[0]:04x},{key[1]:04x}): {e}", "red"
-                    )
-                )
-                return None
-        else:
-            print(colored(f"No handler for SNAC({key[0]:04x},{key[1]:04x})", "red"))
-            return None
-
-
 def auth_server(
-    address: str, port: int, dispatcher: SnacDispatcher, visualizer: SnacVisualizer
+    address: str, port: int, dispatcher: SnacDispatcher, parser: SnacParser
 ):
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,10 +73,10 @@ def auth_server(
                     elif flap["channel"] == FlapChannel.KEEPALIVE:
                         continue
                     elif flap["channel"] == FlapChannel.SNAC:
-                        snac = parse_snac(flap["payload"])
-                        if snac:
+                        if flap.get("payload"):
                             # Visualize SNAC
-                            print(visualizer.visualize(snac))
+                            print(parser.visualize(flap["payload"]))
+                            snac = parser.parse(flap["payload"])
                             response = dispatcher.dispatch(snac, client)
                             if response:
                                 client.send_snac(
@@ -146,7 +116,7 @@ def bos_server(
     address: str,
     port: int,
     dispatcher: SnacDispatcher,
-    visualizer: SnacVisualizer,
+    parser: SnacParser,
     screen_name: str,
 ):
 
@@ -199,10 +169,10 @@ def bos_server(
                     elif flap["channel"] == FlapChannel.KEEPALIVE:
                         continue
                     elif flap["channel"] == FlapChannel.SNAC:
-                        snac = parse_snac(flap["payload"])
-                        if snac:
+                        if flap.get("payload"):
                             # Visualize SNAC
-                            print(visualizer.visualize(snac))
+                            print(parser.visualize(flap["payload"]))
+                            snac = parser.parse(flap["payload"])
                             response = dispatcher.dispatch(snac, client)
                             if response:
                                 client.send_snac(
@@ -242,25 +212,27 @@ def main():
     """Run auth and BOS servers in separate threads."""
     # Initialize shared dispatcher and visualizer
     dispatcher = SnacDispatcher()
-    visualizer = SnacVisualizer()
+    parser = SnacParser()
 
     # Register handlers
     dispatcher.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestHandler())
     dispatcher.register_handler(SnacService.AUTH, 0x0002, LoginRequestHandler())
     dispatcher.register_handler(SnacService.GENERIC, 0x0017, FamilyVersionHandler())
-    dispatcher.register_handler(SnacService.GENERIC, 0x006, RateRequestHandler())
-    dispatcher.register_handler(SnacService.GENERIC, 0x00E, OnlineInfoHandler())
+    dispatcher.register_handler(SnacService.GENERIC, 0x0006, RateRequestHandler())
+    dispatcher.register_handler(SnacService.GENERIC, 0x000E, OnlineInfoHandler())
+    dispatcher.register_handler(SnacService.GENERIC, 0x0011, IdleTimeHandler())
 
-    visualizer.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestVisualizer())
-    visualizer.register_handler(SnacService.AUTH, 0x0002, LoginRequestVisualizer())
-    visualizer.register_handler(SnacService.GENERIC, 0x0017, FamilyVersionVisualizer())
-    visualizer.register_handler(SnacService.GENERIC, 0x0004, ServiceRequestVisualizer())
+    parser.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestParser())
+    parser.register_handler(SnacService.AUTH, 0x0002, LoginRequestParser())
+    parser.register_handler(SnacService.GENERIC, 0x0017, FamilyVersionParser())
+    parser.register_handler(SnacService.GENERIC, 0x0004, ServiceRequestParser())
+    parser.register_handler(SnacService.GENERIC, 0x0011, IdleTimeParser())
 
     # Start auth server
     auth_address, auth_port = AUTH_SERVER_ADDRESS.split(":")
     auth_thread = threading.Thread(
         target=auth_server,
-        args=(auth_address, int(auth_port), dispatcher, visualizer),
+        args=(auth_address, int(auth_port), dispatcher, parser),
     )
     auth_thread.daemon = True
     auth_thread.start()
@@ -269,7 +241,7 @@ def main():
     bos_address, bos_port = BOS_SERVER_ADDRESS.split(":")
     bos_thread = threading.Thread(
         target=bos_server,
-        args=(bos_address, int(bos_port), dispatcher, visualizer, SCREEN_NAME),
+        args=(bos_address, int(bos_port), dispatcher, parser, SCREEN_NAME),
     )
     bos_thread.daemon = True
     bos_thread.start()
