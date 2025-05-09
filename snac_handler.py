@@ -67,7 +67,6 @@ class FamilyVersionHandler(SnacHandler):
         self, snac: Dict[str, Any], client: ClientContext
     ) -> Optional[Dict[str, Any]]:
         # Send back identical family versions
-        print(snac.keys())
         versions = b"".join(
             struct.pack(">HH", a, b) for a, b in snac["family_versions"]
         )
