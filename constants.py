@@ -1,0 +1,84 @@
+from enum import IntEnum
+
+# Constants
+AUTH_SERVER_ADDRESS = "127.0.0.1:5190"
+BOS_SERVER_ADDRESS = "127.0.0.1:4040"
+
+
+class FlapChannel(IntEnum):
+    CONN_NEW = 0x01
+    SNAC = 0x02
+    ERROR = 0x03
+    CONN_CLOSE = 0x04
+    KEEPALIVE = 0x05
+
+
+class TlvType(IntEnum):
+    SCREEN_NAME = 0x01
+    SIGNON_TIME = 0x03
+    ERROR_URL = 0x04
+    BOS_SERVER = 0x05
+    MEMBER_SINCE = 0x05
+    USER_STATUS = 0x06
+    AUTH_COOKIE = 0x06
+    ERROR_CODE = 0x08
+    EXTERNAL_IP = 0x0A
+    IDLE_TIME = 0x0F
+    EMAIL_ADDR = 0x11
+    UNKNOWN_1E = 0x1E
+    AUTH_KEY = 0x25
+    BETA_BUILD = 0x40
+    BETA_URL = 0x41
+    BETA_INFO = 0x42
+    BETA_NAME = 0x43
+    RELEASE_BUILD = 0x44
+    RELEASE_URL = 0x45
+    RELEASE_NAME = 0x46
+    BETA_MD5 = 0x48
+    RELEASE_MD5 = 0x49
+    UNKNOWN_4B = 0x4B
+    PASS_CHANGE_URL = 0x54
+    UNKNOWN_5A = 0x5A
+
+
+class SnacService(IntEnum):
+    GENERIC = 0x0001
+    LOCATION = 0x0002
+    BUDDY = 0x0003
+    ICBM = 0x0004
+    ADS = 0x005
+    INVITES = 0x0006
+    ADMIN = 0x0007
+    POPUP = 0x0008
+    PRIVACY = 0x0009
+    USER_LOOKUP = 0x000A
+    STATS = 0x000B
+    TRANSLATION = 0x000C
+    CHAT_NAV = 0x000D
+    CHAT = 0x000E
+    DIR_SEARCH = 0x000F
+    SSBI = 0x0010
+    SSI = 0x0013
+    ICQ = 0x0015
+    AUTH = 0x0017
+    UNKNOWN_18 = 0x0018
+    BROADCAST = 0x0085
+
+
+class UserClass(IntEnum):
+    CLASS_UNCONFIRMED = 0x0001
+    CLASS_ADMINISTRATOR = 0x0002
+    CLASS_AOL = 0x0004
+    CLASS_COMMERCIAL = 0x0008
+    CLASS_FREE = 0x0010
+    CLASS_AWAY = 0x0020
+    CLASS_ICQ = 0x0040
+    CLASS_WIRELESS = 0x0080
+    CLASS_UNKNOWN100 = 0x0100
+    CLASS_UNKNOWN200 = 0x0200
+    CLASS_UNKNOWN400 = 0x0400
+    CLASS_UNKNOWN800 = 0x0800
+
+
+class UserStatus(IntEnum):
+    TODO = 0x01
