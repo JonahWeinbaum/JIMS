@@ -13,10 +13,10 @@ def auth_server(
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((address, port))
     server.listen(5)
-    print(colored(f"AUTH server listening on {address}:{port}", "blue"))
+    print(colored(f"[AUTH] Server listening on {address}:{port}", "blue"))
 
     def handle_client(client_socket: socket.socket, addr: Tuple[str, int]):
-        print(colored(f"Client connected: {addr}", "blue"))
+        print(colored(f"[AUTH] Client connected: {addr}", "blue"))
         client = ClientContext(client_socket, addr)
         buffer = bytes()
 
@@ -27,7 +27,7 @@ def auth_server(
             while True:
                 data = client_socket.recv(1024)
                 if not data:
-                    print(colored("Client disconnected", "red"))
+                    print(colored("[AUTH] Client disconnected", "red"))
                     break
 
                 buffer += data
@@ -36,7 +36,7 @@ def auth_server(
                     if flap is None:
                         print(
                             colored(
-                                f"Partial FLAP received ({len(buffer)} bytes), waiting for more data",
+                                f"[AUTH] Partial FLAP received ({len(buffer)} bytes), waiting for more data",
                                 "yellow",
                             )
                         )
@@ -55,7 +55,7 @@ def auth_server(
                     elif flap["channel"] == FlapChannel.SNAC:
                         if flap.get("payload"):
                             # Visualize SNAC
-                            print(parser.visualize(flap["payload"]))
+                            print("[AUTH] "+parser.visualize(flap["payload"]))
                             snac = parser.parse(flap["payload"])
                             response = dispatcher.dispatch(snac, client)
                             if response:
@@ -66,17 +66,17 @@ def auth_server(
                                     response.get("payload"),
                                 )
                         else:
-                            print(colored("Invalid SNAC payload", "red"))
+                            print(colored("[AUTH] Invalid SNAC payload", "red"))
 
                     else:
                         print(
                             colored(
-                                f"Unhandled FLAP channel: {flap['channel']:02x}", "red"
+                                f"[AUTH] Unhandled FLAP channel: {flap['channel']:02x}", "red"
                             )
                         )
 
         except (socket.error, BrokenPipeError) as e:
-            print(colored(f"Client disconnected with error: {e}", "red"))
+            print(colored(f"[AUTH] Client disconnected with error: {e}", "red"))
         finally:
             client_socket.close()
 

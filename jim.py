@@ -14,7 +14,9 @@ from snac_parser import *
 from utils import format_hex_ascii
 from auth_server import auth_server
 from bos_server import bos_server
-
+from stat_server import stat_server
+from dir_server import dir_server
+from unknown_server import unk_server
 try:
     from termcolor import colored
 except ImportError:
@@ -40,12 +42,22 @@ def main():
     dispatcher.register_handler(SnacService.GENERIC, 0x0006, RateRequestHandler())
     dispatcher.register_handler(SnacService.GENERIC, 0x000E, OnlineInfoHandler())
     dispatcher.register_handler(SnacService.GENERIC, 0x0011, IdleTimeHandler())
+    dispatcher.register_handler(SnacService.GENERIC, 0x0002, ClientReadyHandler())
+    dispatcher.register_handler(SnacService.GENERIC, 0x0004, ServiceRequestHandler())
+    dispatcher.register_handler(SnacService.LOCATION, 0x0002, LocationRightsHandler())
+    dispatcher.register_handler(SnacService.LOCATION, 0x0009, DirectoryInfoHandler())
+    dispatcher.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsHandler())
 
     parser.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestParser())
     parser.register_handler(SnacService.AUTH, 0x0002, LoginRequestParser())
     parser.register_handler(SnacService.GENERIC, 0x0017, FamilyVersionParser())
     parser.register_handler(SnacService.GENERIC, 0x0004, ServiceRequestParser())
     parser.register_handler(SnacService.GENERIC, 0x0011, IdleTimeParser())
+    parser.register_handler(SnacService.GENERIC, 0x0002, ClientReadyParser())
+    parser.register_handler(SnacService.LOCATION, 0x0002, LocationRightsParser())
+    parser.register_handler(SnacService.LOCATION, 0x0009, DirectoryInfoParser())
+    parser.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsParser())
+
 
     # Start auth server
     auth_address, auth_port = AUTH_SERVER_ADDRESS.split(":")
@@ -65,10 +77,39 @@ def main():
     bos_thread.daemon = True
     bos_thread.start()
 
+    # Start STAT server
+    stat_address, stat_port = STAT_SERVER_ADDRESS.split(":")
+    stat_thread = threading.Thread(
+        target=stat_server,
+        args=(stat_address, int(stat_port), dispatcher, parser, SCREEN_NAME),
+    )
+    stat_thread.daemon = True
+    stat_thread.start()
+
+    # Start DIR server
+    dir_address, dir_port = DIR_SERVER_ADDRESS.split(":")
+    dir_thread = threading.Thread(
+        target=dir_server,
+        args=(dir_address, int(dir_port), dispatcher, parser, SCREEN_NAME),
+    )
+    dir_thread.daemon = True
+    dir_thread.start()
+
+    # Start UNK server
+    unk_address, unk_port = UNK_SERVER_ADDRESS.split(":")
+    unk_thread = threading.Thread(
+        target=unk_server,
+        args=(unk_address, int(unk_port), dispatcher, parser, SCREEN_NAME),
+    )
+    unk_thread.daemon = True
+    unk_thread.start()
+
+    
     # Wait on all threads completion
     try:
         auth_thread.join()
         bos_thread.join()
+        stat_thread.join()
     except KeyboardInterrupt:
         print(colored("Shutting down all servers", "blue"))
 

@@ -17,17 +17,21 @@ def bos_server(
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((address, port))
     server.listen(5)
-    print(colored(f"BOS server listening on {address}:{port}", "blue"))
+    print(colored(f"[BOS] Server listening on {address}:{port}", "blue"))
 
     def handle_client(client_socket: socket.socket, addr: Tuple[str, int]):
-        print(colored(f"Client connected: {addr}", "blue"))
+        print(colored(f"[BOS] Client connected: {addr}", "blue"))
         client = ClientContext(client_socket, addr)
         client.screen_name = screen_name
         buffer = bytes()
 
         # Begin protocol negotiation
-        families = SnacService.GENERIC.to_bytes(2, "big") + SnacService.CHAT.to_bytes(
-            2, "big"
+        families = (
+            SnacService.GENERIC.to_bytes(2, "big")
+            + SnacService.LOCATION.to_bytes(2, "big")
+            + SnacService.BUDDY.to_bytes(2, "big")
+            + SnacService.CHAT.to_bytes(2, "big")
+            
         )
 
         client.send_snac(SnacService.GENERIC, 0x0003, 0x0000, families)
@@ -36,7 +40,7 @@ def bos_server(
             while True:
                 data = client_socket.recv(1024)
                 if not data:
-                    print(colored("Client disconnected", "red"))
+                    print(colored("[BOS] Client disconnected", "red"))
                     break
 
                 buffer += data
@@ -45,7 +49,7 @@ def bos_server(
                     if flap is None:
                         print(
                             colored(
-                                f"Partial FLAP received ({len(buffer)} bytes), waiting for more data",
+                                f"[BOS] Partial FLAP received ({len(buffer)} bytes), waiting for more data",
                                 "yellow",
                             )
                         )
@@ -64,7 +68,7 @@ def bos_server(
                     elif flap["channel"] == FlapChannel.SNAC:
                         if flap.get("payload"):
                             # Visualize SNAC
-                            print(parser.visualize(flap["payload"]))
+                            print("[BOSS] " + parser.visualize(flap["payload"]))
                             snac = parser.parse(flap["payload"])
                             response = dispatcher.dispatch(snac, client)
                             if response:
@@ -75,7 +79,7 @@ def bos_server(
                                     response.get("payload"),
                                 )
                         else:
-                            print(colored("Invalid SNAC payload", "red"))
+                            print(colored("[BOS] Invalid SNAC payload", "red"))
 
                     else:
                         print(
