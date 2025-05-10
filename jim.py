@@ -49,6 +49,8 @@ def main():
     dispatcher.register_handler(SnacService.LOCATION, 0x0009, DirectoryInfoHandler())
     dispatcher.register_handler(SnacService.LOCATION, 0x0004, SetUserInfoHandler())
     dispatcher.register_handler(SnacService.LOCATION, 0x000B, QueryScreenNameHandler())
+    dispatcher.register_handler(SnacService.LOCATION, 0x000F, KeywordInfoHandler())
+    dispatcher.register_handler(SnacService.ICBM, 0x0004, ChatParameterHandler())
     dispatcher.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsHandler())
 
     parser.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestParser())
@@ -61,6 +63,9 @@ def main():
     parser.register_handler(SnacService.LOCATION, 0x0009, DirectoryInfoParser())
     parser.register_handler(SnacService.LOCATION, 0x0004, SetUserInfoParser())
     parser.register_handler(SnacService.LOCATION, 0x000B, QueryScreenNameParser())
+    parser.register_handler(SnacService.LOCATION, 0x000F, KeywordInfoParser())
+    parser.register_handler(SnacService.ICBM, 0x0004, ChatParameterParser())
+    parser.register_handler(SnacService.ICBM, 0x0006, ChatMessageParser())
     parser.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsParser())
 
     # Start auth server

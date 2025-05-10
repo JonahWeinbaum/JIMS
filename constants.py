@@ -60,11 +60,11 @@ class SnacService(IntEnum):
     CHAT_NAV = 0x000D
     CHAT = 0x000E
     DIR_SEARCH = 0x000F
-    SSBI = 0x0010
-    SSI = 0x0013
+    BART = 0x0010
+    FEEDBAG = 0x0013
     ICQ = 0x0015
     AUTH = 0x0017
-    UNKNOWN_18 = 0x0018
+    ALERT = 0x0018
     BROADCAST = 0x0085
 
 

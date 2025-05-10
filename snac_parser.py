@@ -311,6 +311,106 @@ class BuddyRightsParser(SnacParserHandler):
             "request_id": request_id,
         }
 
+class ChatParameterParser(SnacParserHandler):
+    """Parser for SNAC(04,04) - Chat parameter info request."""
+
+    def visualize(self, snac: bytes) -> str:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+        lines = [
+            colored(
+                f"SNAC: Family=0x{family:04x} (ICBM), Subtype=0x{subtype:04x} (Chat Parameter Request), "
+                f"Flags=0x{flags:04x}, RequestID=0x{request_id:08x}",
+                "green",
+            )
+        ]
+
+        return "\n".join(lines)
+
+    def parse(self, snac: bytes) -> Dict[str, Any]:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+        return {
+            "family": family,
+            "subtype": subtype,
+            "flags": flags,
+            "request_id": request_id,
+        }
+
+class ChatMessageParser(SnacParserHandler):
+    """Parser for SNAC(04,06) - Chat message request."""
+
+    def visualize(self, snac: bytes) -> str:
+        if len(snac) < 21:
+            return None
+        family, subtype, flags, request_id, cookie, channel, name_length  = struct.unpack("!HHHIQHB", snac[:21])
+        data_start = 21 + name_length
+        screen_name = snac[21:data_start]
+        data = snac[data_start:]
+        lines = [
+            colored(
+                f"SNAC: Family=0x{family:04x} (ICBM), Subtype=0x{subtype:04x} (Chat Parameter Request), "
+                f"Flags=0x{flags:04x}, RequestID=0x{request_id:08x}",
+                "green",
+            )
+        ]
+
+        tlvs = parse_tlv(data)
+        lines.append(
+            colored(
+                f"├── Screen Name = {screen_name}",
+                "cyan",
+            )
+        )
+        lines.append(
+            colored(
+                f"├── Channel  = {channel}",
+                "cyan",
+            )
+        )
+
+        for i, tlv in enumerate(tlvs):
+
+            type_name = b"Unknown"#type_names[tlv["type"]]
+
+            value_hex = " ".join(
+                a + b for a, b in zip(tlv["value"].hex()[::2], tlv["value"].hex()[1::2])
+            )
+            value_str = repr(tlv["value"]) if tlv["value"] else "empty"
+            if tlv["type"] == 0x05:
+                value_str = value_hex
+            if i < len(tlvs) - 1:
+                lines.append(
+                    colored(
+                        f"├── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+            else:
+                lines.append(
+                    colored(
+                        f"└── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+
+
+        return "\n".join(lines)
+
+
+    def parse(self, snac: bytes) -> Dict[str, Any]:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+        return {
+            "family": family,
+            "subtype": subtype,
+            "flags": flags,
+            "request_id": request_id,
+        }
+    
 
 class IdleTimeParser(SnacParserHandler):
     """Parser for SNAC(01,11) - Set idle time."""
@@ -378,13 +478,13 @@ class DirectoryInfoParser(SnacParserHandler):
             0x06: b"Country",
             0x07: b"State",
             0x08: b"City",
-            0x0A: b"Unknown",
             0x0C: b"Nickname",
             0x0D: b"Zip",
             0x21: b"Address",
         }
         for i, tlv in enumerate(tlvs):
-            type_name = type_names[tlv["type"]]
+            type_name = type_names.get(tlv["type"])
+            type_name = type_name if type_name else b"Unknown"
             value_str = (
                 tlv["value"].decode("ascii", errors="ignore")
                 if tlv["value"]
@@ -423,6 +523,209 @@ class DirectoryInfoParser(SnacParserHandler):
             "payload": data,
         }
 
+class DirectoryInfoParser(SnacParserHandler):
+    """Parser for SNAC(02,09) - Locate directory info request."""
+
+    def visualize(self, snac: bytes) -> str:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+
+        lines = [
+            colored(
+                f"SNAC: Family=0x{family:04x} (LOCATION) , Subtype=0x{subtype:04x} (Directory Info Request), "
+                f"Flags=0x{flags:04x}, RequestID=0x{request_id:08x}",
+                "green",
+            )
+        ]
+
+        data = snac[10:]
+        tlvs = parse_tlv(data)
+        type_names: Dict[int, bytes] = {
+            0x01: b"First Name",
+            0x02: b"Last Name",
+            0x03: b"Middle Name",
+            0x04: b"Maiden Name",
+            0x06: b"Country",
+            0x07: b"State",
+            0x08: b"City",
+            0x0C: b"Nickname",
+            0x0D: b"Zip",
+            0x21: b"Address",
+        }
+        for i, tlv in enumerate(tlvs):
+            type_name = type_names.get(tlv["type"])
+            type_name = type_name if type_name else b"Unknown"
+            value_str = (
+                tlv["value"].decode("ascii", errors="ignore")
+                if tlv["value"]
+                else "empty"
+            )
+            if i < len(tlvs) - 1:
+                lines.append(
+                    colored(
+                        f"├── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+            else:
+                lines.append(
+                    colored(
+                        f"└── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+        return "\n".join(lines)
+
+    def parse(self, snac: bytes) -> Dict[str, Any]:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+
+        # TODO Separate TLV fields
+        data = snac[10:]
+        tlvs = parse_tlv(data)
+        return {
+            "family": family,
+            "subtype": subtype,
+            "flags": flags,
+            "request_id": request_id,
+            "tlvs": tlvs,
+            "payload": data,
+        }
+class DirectoryInfoParser(SnacParserHandler):
+    """Parser for SNAC(02,09) - Locate directory info request."""
+
+    def visualize(self, snac: bytes) -> str:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+
+        lines = [
+            colored(
+                f"SNAC: Family=0x{family:04x} (LOCATION) , Subtype=0x{subtype:04x} (Directory Info Request), "
+                f"Flags=0x{flags:04x}, RequestID=0x{request_id:08x}",
+                "green",
+            )
+        ]
+
+        data = snac[10:]
+        tlvs = parse_tlv(data)
+        type_names: Dict[int, bytes] = {
+            0x01: b"First Name",
+            0x02: b"Last Name",
+            0x03: b"Middle Name",
+            0x04: b"Maiden Name",
+            0x06: b"Country",
+            0x07: b"State",
+            0x08: b"City",
+            0x0C: b"Nickname",
+            0x0D: b"Zip",
+            0x21: b"Address",
+        }
+        for i, tlv in enumerate(tlvs):
+            type_name = type_names.get(tlv["type"])
+            type_name = type_name if type_name else b"Unknown"
+            value_str = (
+                tlv["value"].decode("ascii", errors="ignore")
+                if tlv["value"]
+                else "empty"
+            )
+            if i < len(tlvs) - 1:
+                lines.append(
+                    colored(
+                        f"├── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+            else:
+                lines.append(
+                    colored(
+                        f"└── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+        return "\n".join(lines)
+
+    def parse(self, snac: bytes) -> Dict[str, Any]:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+
+        # TODO Separate TLV fields
+        data = snac[10:]
+        tlvs = parse_tlv(data)
+        return {
+            "family": family,
+            "subtype": subtype,
+            "flags": flags,
+            "request_id": request_id,
+            "tlvs": tlvs,
+            "payload": data,
+        }
+
+class KeywordInfoParser(SnacParserHandler):
+    """Parser for SNAC(02,0F) - Locate directory info request."""
+
+    def visualize(self, snac: bytes) -> str:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+
+        lines = [
+            colored(
+                f"SNAC: Family=0x{family:04x} (LOCATION) , Subtype=0x{subtype:04x} (Keyword Info), "
+                f"Flags=0x{flags:04x}, RequestID=0x{request_id:08x}",
+                "green",
+            )
+        ]
+
+        data = snac[10:]
+        tlvs = parse_tlv(data)
+        type_names: Dict[int, bytes] = {
+            0x0b: b"Interest",
+        }
+        for i, tlv in enumerate(tlvs):
+            type_name = type_names.get(tlv["type"])
+            type_name = type_name if type_name else b"Unknown"
+            value_str = (
+                tlv["value"].decode("ascii", errors="ignore")
+                if tlv["value"]
+                else "empty"
+            )
+            if i < len(tlvs) - 1:
+                lines.append(
+                    colored(
+                        f"├── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+            else:
+                lines.append(
+                    colored(
+                        f"└── TLV: Type={type_name}, Length={len(tlv['value'])}, Value={repr(value_str)}",
+                        "yellow",
+                    )
+                )
+        return "\n".join(lines)
+
+    def parse(self, snac: bytes) -> Dict[str, Any]:
+        if len(snac) < 10:
+            return None
+        family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+
+        # TODO Separate TLV fields
+        data = snac[10:]
+        tlvs = parse_tlv(data)
+        return {
+            "family": family,
+            "subtype": subtype,
+            "flags": flags,
+            "request_id": request_id,
+            "tlvs": tlvs,
+            "payload": data,
+        }
+    
 
 class FamilyVersionParser(SnacParserHandler):
     """Parser for SNAC(01,17) - Version request."""

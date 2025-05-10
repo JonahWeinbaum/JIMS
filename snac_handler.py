@@ -172,7 +172,31 @@ class LocationRightsHandler(SnacHandler):
             "payload": tlvs,
         }
 
+class ChatParameterHandler(SnacHandler):
+    """Handler for SNAC(04,04) - Chat parameter info request."""
 
+    def handle(
+        self, snac: Dict[str, Any], client: ClientContext
+    ) -> Optional[Dict[str, Any]]:
+        data = (
+            b"\x00\x00"
+            + b"\x00\x00\x00\x03"
+            + b"\x02\x00"
+            + b"\x03\xe7"
+            + b"\x03\xe7"
+            + b"\x00\x00"
+            + b"\x03\xe8"
+        )
+
+        return {
+            "family": SnacService.ICBM,
+            "subtype": 0x0005,
+            "flags": 0x0000,
+            "request_id": snac["request_id"],
+            "payload": data,
+        }
+
+    
 class DirectoryInfoHandler(SnacHandler):
     """Handler for SNAC(02,09) - Directory info request."""
 
@@ -183,6 +207,21 @@ class DirectoryInfoHandler(SnacHandler):
         return {
             "family": SnacService.LOCATION,
             "subtype": 0x0003,
+            "flags": 0x0000,
+            "request_id": snac["request_id"],
+            "payload": b"\x00\x01",
+        }
+
+class KeywordInfoHandler(SnacHandler):
+    """Handler for SNAC(02,0F) - Keyword info request."""
+
+    def handle(
+        self, snac: Dict[str, Any], client: ClientContext
+    ) -> Optional[Dict[str, Any]]:
+
+        return {
+            "family": SnacService.LOCATION,
+            "subtype": 0x0010,
             "flags": 0x0000,
             "request_id": snac["request_id"],
             "payload": b"\x00\x01",
