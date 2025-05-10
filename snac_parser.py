@@ -311,6 +311,7 @@ class BuddyRightsParser(SnacParserHandler):
             "request_id": request_id,
         }
 
+
 class ChatParameterParser(SnacParserHandler):
     """Parser for SNAC(04,04) - Chat parameter info request."""
 
@@ -339,13 +340,16 @@ class ChatParameterParser(SnacParserHandler):
             "request_id": request_id,
         }
 
+
 class ChatMessageParser(SnacParserHandler):
     """Parser for SNAC(04,06) - Chat message request."""
 
     def visualize(self, snac: bytes) -> str:
         if len(snac) < 21:
             return None
-        family, subtype, flags, request_id, cookie, channel, name_length  = struct.unpack("!HHHIQHB", snac[:21])
+        family, subtype, flags, request_id, cookie, channel, name_length = (
+            struct.unpack("!HHHIQHB", snac[:21])
+        )
         data_start = 21 + name_length
         screen_name = snac[21:data_start]
         data = snac[data_start:]
@@ -373,7 +377,7 @@ class ChatMessageParser(SnacParserHandler):
 
         for i, tlv in enumerate(tlvs):
 
-            type_name = b"Unknown"#type_names[tlv["type"]]
+            type_name = b"Unknown"  # type_names[tlv["type"]]
 
             value_hex = " ".join(
                 a + b for a, b in zip(tlv["value"].hex()[::2], tlv["value"].hex()[1::2])
@@ -396,21 +400,21 @@ class ChatMessageParser(SnacParserHandler):
                     )
                 )
 
-
         return "\n".join(lines)
-
 
     def parse(self, snac: bytes) -> Dict[str, Any]:
         if len(snac) < 10:
             return None
         family, subtype, flags, request_id = struct.unpack("!HHHI", snac[:10])
+        data = snac[10:]
         return {
             "family": family,
             "subtype": subtype,
             "flags": flags,
             "request_id": request_id,
+            "payload": data,
         }
-    
+
 
 class IdleTimeParser(SnacParserHandler):
     """Parser for SNAC(01,11) - Set idle time."""
@@ -523,6 +527,7 @@ class DirectoryInfoParser(SnacParserHandler):
             "payload": data,
         }
 
+
 class DirectoryInfoParser(SnacParserHandler):
     """Parser for SNAC(02,09) - Locate directory info request."""
 
@@ -593,6 +598,8 @@ class DirectoryInfoParser(SnacParserHandler):
             "tlvs": tlvs,
             "payload": data,
         }
+
+
 class DirectoryInfoParser(SnacParserHandler):
     """Parser for SNAC(02,09) - Locate directory info request."""
 
@@ -663,6 +670,7 @@ class DirectoryInfoParser(SnacParserHandler):
             "tlvs": tlvs,
             "payload": data,
         }
+
 
 class KeywordInfoParser(SnacParserHandler):
     """Parser for SNAC(02,0F) - Locate directory info request."""
@@ -683,7 +691,7 @@ class KeywordInfoParser(SnacParserHandler):
         data = snac[10:]
         tlvs = parse_tlv(data)
         type_names: Dict[int, bytes] = {
-            0x0b: b"Interest",
+            0x0B: b"Interest",
         }
         for i, tlv in enumerate(tlvs):
             type_name = type_names.get(tlv["type"])
@@ -725,7 +733,7 @@ class KeywordInfoParser(SnacParserHandler):
             "tlvs": tlvs,
             "payload": data,
         }
-    
+
 
 class FamilyVersionParser(SnacParserHandler):
     """Parser for SNAC(01,17) - Version request."""

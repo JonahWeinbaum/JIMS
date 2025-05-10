@@ -17,6 +17,7 @@ from bos_server import bos_server
 from stat_server import stat_server
 from dir_server import dir_server
 from unknown_server import unk_server
+from message_server import message_server
 
 try:
     from termcolor import colored
@@ -51,6 +52,7 @@ def main():
     dispatcher.register_handler(SnacService.LOCATION, 0x000B, QueryScreenNameHandler())
     dispatcher.register_handler(SnacService.LOCATION, 0x000F, KeywordInfoHandler())
     dispatcher.register_handler(SnacService.ICBM, 0x0004, ChatParameterHandler())
+    dispatcher.register_handler(SnacService.ICBM, 0x0006, ChatMessageHandler())
     dispatcher.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsHandler())
 
     parser.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestParser())
@@ -76,6 +78,15 @@ def main():
     )
     auth_thread.daemon = True
     auth_thread.start()
+
+    # Start MESSAGE server
+    message_address, message_port = MESSAGE_SERVER_ADDRESS.split(":")
+    message_thread = threading.Thread(
+        target=message_server,
+        args=(message_address, int(message_port), dispatcher, parser, SCREEN_NAME),
+    )
+    message_thread.daemon = True
+    message_thread.start()
 
     # Start BOS server
     bos_address, bos_port = BOS_SERVER_ADDRESS.split(":")
