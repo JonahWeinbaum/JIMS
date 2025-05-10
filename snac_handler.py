@@ -46,7 +46,7 @@ class LoginRequestHandler(SnacHandler):
         auth_cookie = os.urandom(16)
         tlvs = (
             create_tlv(TlvType.SCREEN_NAME, client.screen_name.encode("ascii"))
-            + create_tlv(TlvType.BOS_SERVER, BOS_SERVER_ADDRESS.encode('ascii'))
+            + create_tlv(TlvType.BOS_SERVER, BOS_SERVER_ADDRESS.encode("ascii"))
             + create_tlv(TlvType.AUTH_COOKIE, auth_cookie)
             + create_tlv(TlvType.EMAIL_ADDR, b"Jonah.Weinbaum@gmail.com")
             + create_tlv(TlvType.PASS_CHANGE_URL, b"www.youtube.com")
@@ -102,13 +102,23 @@ class IdleTimeHandler(SnacHandler):
     ) -> Optional[Dict[str, Any]]:
         return None
 
+
 class ClientReadyHandler(SnacHandler):
     """Handler for SNAC(01,02) - Client ready."""
 
     def handle(
         self, snac: Dict[str, Any], client: ClientContext
     ) -> Optional[Dict[str, Any]]:
-        return None    
+        return None
+
+
+class SetUserInfoHandler(SnacHandler):
+    """Handler for SNAC(02,04) - Set user info."""
+
+    def handle(
+        self, snac: Dict[str, Any], client: ClientContext
+    ) -> Optional[Dict[str, Any]]:
+        return None
 
 
 class OnlineInfoHandler(SnacHandler):
@@ -140,18 +150,20 @@ class OnlineInfoHandler(SnacHandler):
             "payload": preamble + tlvs,
         }
 
+
 class LocationRightsHandler(SnacHandler):
     """Handler for SNAC(02,02) - Location rights request."""
+
     def handle(
         self, snac: Dict[str, Any], client: ClientContext
     ) -> Optional[Dict[str, Any]]:
         tlvs = (
-            create_tlv(0x01, int(100).to_bytes(2, 'big'))
-            + create_tlv(0x02, int(100).to_bytes(2, 'big'))
-            + create_tlv(0x03, b'\x00\x0a')
-            + create_tlv(0x04, b'\x10\x00')
+            create_tlv(0x01, int(100).to_bytes(2, "big"))
+            + create_tlv(0x02, int(100).to_bytes(2, "big"))
+            + create_tlv(0x03, b"\x00\x0a")
+            + create_tlv(0x04, b"\x10\x00")
         )
-        
+
         return {
             "family": SnacService.LOCATION,
             "subtype": 0x0003,
@@ -160,31 +172,35 @@ class LocationRightsHandler(SnacHandler):
             "payload": tlvs,
         }
 
+
 class DirectoryInfoHandler(SnacHandler):
     """Handler for SNAC(02,09) - Directory info request."""
+
     def handle(
         self, snac: Dict[str, Any], client: ClientContext
     ) -> Optional[Dict[str, Any]]:
-        
+
         return {
             "family": SnacService.LOCATION,
             "subtype": 0x0003,
             "flags": 0x0000,
             "request_id": snac["request_id"],
-            "payload": b'\x00\x01',
+            "payload": b"\x00\x01",
         }
-    
+
+
 class BuddyRightsHandler(SnacHandler):
     """Handler for SNAC(03,02) - Buddy rights request."""
+
     def handle(
         self, snac: Dict[str, Any], client: ClientContext
     ) -> Optional[Dict[str, Any]]:
         tlvs = (
-            create_tlv(0x01, int(100).to_bytes(2, 'big'))
-            + create_tlv(0x02, int(100).to_bytes(2, 'big'))
-            + create_tlv(0x03, b'\x00\x0a')
+            create_tlv(0x01, int(100).to_bytes(2, "big"))
+            + create_tlv(0x02, int(100).to_bytes(2, "big"))
+            + create_tlv(0x03, b"\x00\x0a")
         )
-        
+
         return {
             "family": SnacService.BUDDY,
             "subtype": 0x0003,
@@ -193,25 +209,46 @@ class BuddyRightsHandler(SnacHandler):
             "payload": tlvs,
         }
 
+
+class QueryScreenNameHandler(SnacHandler):
+    """Handler for SNAC(02,0b) - Query screen name request."""
+
+    def handle(
+        self, snac: Dict[str, Any], client: ClientContext
+    ) -> Optional[Dict[str, Any]]:
+        tlvs = (
+            create_tlv(0x01, int(100).to_bytes(2, "big"))
+            + create_tlv(0x02, int(100).to_bytes(2, "big"))
+            + create_tlv(0x03, b"\x00\x0a")
+        )
+
+        return {
+            "family": SnacService.LOCATION,
+            "subtype": 0x000C,
+            "flags": 0x0000,
+            "request_id": snac["request_id"],
+            "payload": b"",
+        }
+
+
 class ServiceRequestHandler(SnacHandler):
     """Handler for SNAC(01,04) - service request."""
 
     def handle(
         self, snac: Dict[str, Any], client: ClientContext
     ) -> Optional[Dict[str, Any]]:
-        tlvs = (
-            create_tlv(0x0d, SnacService.STATS.to_bytes(2, 'big'))
-            + create_tlv(0x06, b'cookie')
+        tlvs = create_tlv(0x0D, SnacService.STATS.to_bytes(2, "big")) + create_tlv(
+            0x06, b"cookie"
         )
 
-        if (snac["service"] == SnacService.STATS):
-            tlvs += create_tlv(0x05, STAT_SERVER_ADDRESS.encode('ascii'))
+        if snac["service"] == SnacService.STATS:
+            tlvs += create_tlv(0x05, STAT_SERVER_ADDRESS.encode("ascii"))
 
-        if (snac["service"] == SnacService.DIR_SEARCH):
-            tlvs += create_tlv(0x05, DIR_SERVER_ADDRESS.encode('ascii'))
+        if snac["service"] == SnacService.DIR_SEARCH:
+            tlvs += create_tlv(0x05, DIR_SERVER_ADDRESS.encode("ascii"))
 
-        if (snac["service"] == SnacService.UNKNOWN_18):
-            tlvs += create_tlv(0x05, UNK_SERVER_ADDRESS.encode('ascii'))
+        if snac["service"] == SnacService.UNKNOWN_18:
+            tlvs += create_tlv(0x05, UNK_SERVER_ADDRESS.encode("ascii"))
 
         return {
             "family": SnacService.GENERIC,
@@ -220,7 +257,6 @@ class ServiceRequestHandler(SnacHandler):
             "request_id": snac["request_id"],
             "payload": tlvs,
         }
-
 
 
 class SnacDispatcher:

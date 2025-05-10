@@ -17,6 +17,7 @@ from bos_server import bos_server
 from stat_server import stat_server
 from dir_server import dir_server
 from unknown_server import unk_server
+
 try:
     from termcolor import colored
 except ImportError:
@@ -46,6 +47,8 @@ def main():
     dispatcher.register_handler(SnacService.GENERIC, 0x0004, ServiceRequestHandler())
     dispatcher.register_handler(SnacService.LOCATION, 0x0002, LocationRightsHandler())
     dispatcher.register_handler(SnacService.LOCATION, 0x0009, DirectoryInfoHandler())
+    dispatcher.register_handler(SnacService.LOCATION, 0x0004, SetUserInfoHandler())
+    dispatcher.register_handler(SnacService.LOCATION, 0x000B, QueryScreenNameHandler())
     dispatcher.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsHandler())
 
     parser.register_handler(SnacService.AUTH, 0x0006, AuthKeyRequestParser())
@@ -56,8 +59,9 @@ def main():
     parser.register_handler(SnacService.GENERIC, 0x0002, ClientReadyParser())
     parser.register_handler(SnacService.LOCATION, 0x0002, LocationRightsParser())
     parser.register_handler(SnacService.LOCATION, 0x0009, DirectoryInfoParser())
+    parser.register_handler(SnacService.LOCATION, 0x0004, SetUserInfoParser())
+    parser.register_handler(SnacService.LOCATION, 0x000B, QueryScreenNameParser())
     parser.register_handler(SnacService.BUDDY, 0x0002, BuddyRightsParser())
-
 
     # Start auth server
     auth_address, auth_port = AUTH_SERVER_ADDRESS.split(":")
@@ -104,7 +108,6 @@ def main():
     unk_thread.daemon = True
     unk_thread.start()
 
-    
     # Wait on all threads completion
     try:
         auth_thread.join()
